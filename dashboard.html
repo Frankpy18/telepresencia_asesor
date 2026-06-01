@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mi TNPS · Asesor</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+:root{
+  --bg:#080b12;--bg2:#0c0f18;--card:#111520;--card2:#171c2b;
+  --border:#1b2133;--border2:#232b40;
+  --accent:#4f8cff;--accent2:#2563eb;
+  --green:#00e676;--green2:rgba(0,230,118,0.12);
+  --yellow:#ffd740;--yellow2:rgba(255,215,64,0.12);
+  --red:#ff4f6d;--red2:rgba(255,79,109,0.12);
+  --text:#e4eaf5;--muted:#4e5d78;--muted2:#8494ae;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column;}
+
+body::before{
+  content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(79,140,255,0.08),transparent);
+  pointer-events:none;z-index:0;
+}
+
+header{
+  position:relative;z-index:10;
+  padding:16px 28px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border);
+  background:rgba(8,11,18,0.8);backdrop-filter:blur(12px);
+}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand-ico{
+  width:34px;height:34px;border-radius:9px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;font-size:16px;
+}
+.brand-name{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;letter-spacing:.5px;}
+.brand-sub{font-size:10px;color:var(--muted2);letter-spacing:2px;text-transform:uppercase;}
+.date-tag{
+  background:var(--card2);border:1px solid var(--border2);
+  color:var(--green);padding:4px 12px;border-radius:20px;font-size:11px;
+}
+
+#loginScreen{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  position:relative;z-index:5;padding:32px 16px;
+}
+.login-card{
+  width:100%;max-width:420px;
+  background:var(--card);border:1px solid var(--border);border-radius:20px;
+  padding:40px 36px;text-align:center;
+  animation:fadeUp .5s ease;
+}
+.login-avatar{
+  width:72px;height:72px;border-radius:50%;
+  background:linear-gradient(135deg,rgba(79,140,255,.18),rgba(79,140,255,.06));
+  border:2px solid rgba(79,140,255,.25);
+  margin:0 auto 20px;display:flex;align-items:center;justify-content:center;
+  font-size:32px;
+}
+.login-title{font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:700;margin-bottom:6px;}
+.login-sub{color:var(--muted2);font-size:14px;margin-bottom:28px;line-height:1.5;}
+.input-wrap{position:relative;margin-bottom:16px;}
+.user-input{
+  width:100%;background:var(--bg2);border:1.5px solid var(--border2);
+  border-radius:12px;padding:14px 18px;padding-left:44px;
+  color:var(--text);font-size:16px;font-family:'JetBrains Mono',monospace;
+  font-weight:600;letter-spacing:2px;text-transform:uppercase;
+  outline:none;transition:border-color .2s,box-shadow .2s;
+}
+.user-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,140,255,.12);}
+.user-input:disabled{opacity:0.5;cursor:not-allowed;}
+.user-input::placeholder{color:var(--muted);letter-spacing:1px;font-weight:400;font-family:'DM Sans',sans-serif;text-transform:none;}
+.input-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:17px;}
+.btn-ver{
+  width:100%;padding:14px;border-radius:12px;border:none;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#fff;font-size:15px;font-weight:600;font-family:'DM Sans',sans-serif;
+  cursor:pointer;transition:opacity .2s,transform .15s;letter-spacing:.3px;
+}
+.btn-ver:hover:not(:disabled){opacity:.9;transform:translateY(-1px);}
+.btn-ver:disabled{background:var(--border2);color:var(--muted2);cursor:not-allowed;transform:none;}
+.error-msg{
+  background:rgba(255,79,109,.1);border:1px solid rgba(255,79,109,.25);
+  color:var(--red);border-radius:8px;padding:10px 14px;
+  font-size:13px;margin-top:12px;display:none;
+}
+
+#dashScreen{display:none;position:relative;z-index:5;padding:24px 28px 40px;}
+
+.dash-topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:24px;flex-wrap:wrap;gap:12px;
+}
+.agent-info{display:flex;align-items:center;gap:14px;}
+.agent-avatar{
+  width:46px;height:46px;border-radius:50%;
+  background:linear-gradient(135deg,rgba(79,140,255,.2),rgba(79,140,255,.06));
+  border:1.5px solid rgba(79,140,255,.3);
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+}
+.agent-name{font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;}
+.agent-meta{font-size:12px;color:var(--muted2);margin-top:2px;}
+.agent-id{
+  font-family:'JetBrains Mono',monospace;font-size:11px;
+  background:rgba(79,140,255,.1);border:1px solid rgba(79,140,255,.2);
+  color:var(--accent);padding:2px 8px;border-radius:4px;
+}
+.btn-salir{
+  background:var(--card2);border:1px solid var(--border2);
+  color:var(--muted2);padding:8px 16px;border-radius:8px;
+  font-size:13px;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;
+}
+.btn-salir:hover{border-color:var(--red);color:var(--red);}
+
+.compare-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+.tnps-card{
+  background:var(--card);border:1px solid var(--border);border-radius:16px;
+  padding:22px 24px;position:relative;overflow:hidden;
+}
+.tnps-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--c);}
+.tnps-card.day-card{--c:linear-gradient(90deg,var(--accent),#a78bfa);}
+.tnps-card.mes-card{--c:linear-gradient(90deg,var(--green),#00b4d8);}
+.tc-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.tc-ico{font-size:14px;}
+.tc-main{display:flex;align-items:flex-end;gap:12px;margin-bottom:14px;}
+.tc-num{font-family:'Rajdhani',sans-serif;font-size:52px;font-weight:700;line-height:1;color:var(--cv,var(--accent));}
+.tc-unit{font-size:16px;color:var(--muted2);margin-bottom:8px;}
+.tc-pills{display:flex;gap:8px;flex-wrap:wrap;}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500;}
+.pill.p{background:var(--green2);color:var(--green);border:1px solid rgba(0,230,118,.25);}
+.pill.pas{background:var(--yellow2);color:var(--yellow);border:1px solid rgba(255,215,64,.25);}
+.pill.d{background:var(--red2);color:var(--red);border:1px solid rgba(255,79,109,.25);}
+.pill.t{background:rgba(255,255,255,.05);color:var(--muted2);border:1px solid var(--border2);}
+.progress-bar{height:5px;background:var(--bg2);border-radius:3px;margin-top:14px;overflow:hidden;display:flex;gap:2px;}
+.pb-p{background:var(--green);border-radius:3px;height:100%;transition:width 0.5s ease;}
+.pb-pas{background:var(--yellow);border-radius:3px;height:100%;transition:width 0.5s ease;}
+.pb-d{background:var(--red);border-radius:3px;height:100%;transition:width 0.5s ease;}
+
+.section-title{
+  font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;
+  color:var(--muted2);text-transform:uppercase;letter-spacing:1.5px;
+  margin-bottom:14px;display:flex;align-items:center;gap:8px;
+}
+.st-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0;}
+
+.bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px;}
+.trend-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px 24px;}
+.chart-wrap{height:220px;position:relative;}
+
+.surveys-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px 24px;}
+.survey-item{
+  padding:14px 16px;border-radius:12px;background:var(--card2);
+  border:1px solid var(--border2);margin-bottom:10px;
+  display:flex;align-items:center;gap:14px;
+  transition:border-color .2s;
+}
+.survey-item:last-child{margin-bottom:0;}
+.survey-score-badge{
+  width:44px;height:44px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;
+}
+.badge-promotor{background:var(--green2);color:var(--green);border:1px solid rgba(0,230,118,.3);}
+.badge-pasivo{background:var(--yellow2);color:var(--yellow);border:1px solid rgba(255,215,64,.3);}
+.badge-detractor{background:var(--red2);color:var(--red);border:1px solid rgba(255,79,109,.3);}
+.survey-info{flex:1;min-width:0;}
+.survey-tipo{font-size:13px;font-weight:600;margin-bottom:3px;}
+.survey-tipo.promotor{color:var(--green);}
+.survey-tipo.pasivo{color:var(--yellow);}
+.survey-tipo.detractor{color:var(--red);}
+.survey-meta{display:flex;gap:10px;flex-wrap:wrap;}
+.survey-detail{font-size:11px;color:var(--muted2);display:flex;align-items:center;gap:4px;}
+.survey-tipif{
+  font-size:10px;color:var(--accent);
+  background:rgba(79,140,255,0.08);border:1px solid rgba(79,140,255,0.18);
+  border-radius:4px;padding:2px 6px;display:inline-block;margin-top:4px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;
+}
+.no-survey{
+  padding:24px;text-align:center;color:var(--muted);font-size:13px;
+  border:1px dashed var(--border2);border-radius:12px;
+}
+
+/* ── TIPIFICACIÓN TABLE ── */
+.tipif-section{
+  margin-top:20px;
+  background:var(--card);border:1px solid var(--border);border-radius:16px;
+  padding:22px 24px;
+  animation:fadeUp .4s ease .1s both;
+}
+.tipif-controls{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;
+}
+.tipif-tab-group{
+  display:flex;background:var(--bg2);border:1px solid var(--border2);
+  border-radius:8px;padding:3px;
+}
+.tipif-tab{
+  background:transparent;border:none;color:var(--muted2);
+  padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;
+  cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;
+}
+.tipif-tab.active{
+  background:var(--card2);color:var(--text);
+  box-shadow:0 1px 4px rgba(0,0,0,0.3);
+}
+
+.tipif-wrap{
+  overflow-x:auto;border:1px solid var(--border2);border-radius:10px;
+  background:var(--bg2);max-height:340px;overflow-y:auto;
+}
+.tipif-table{width:100%;border-collapse:collapse;font-size:12px;min-width:520px;}
+.tipif-table th{
+  background:var(--card2);color:var(--muted2);font-family:'Rajdhani',sans-serif;
+  font-weight:600;text-transform:uppercase;letter-spacing:1px;
+  padding:10px 14px;position:sticky;top:0;border-bottom:1px solid var(--border2);
+  white-space:nowrap;z-index:1;
+}
+.tipif-table th.tip-col{min-width:210px;text-align:left;}
+.tipif-table th.num-col{width:80px;text-align:center;}
+.tipif-table td{
+  padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle;
+}
+.tipif-table tr:last-child td{border-bottom:none;}
+.tipif-table tr:hover td{background:rgba(79,140,255,0.04);}
+
+.motivo-label{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(79,140,255,0.07);border:1px solid rgba(79,140,255,0.15);
+  border-radius:5px;padding:3px 9px;font-size:11px;color:var(--accent);
+  white-space:nowrap;
+}
+.tip-num{font-family:'JetBrains Mono',monospace;font-weight:600;text-align:center;}
+.tip-prom{color:var(--green);}
+.tip-neut{color:var(--yellow);}
+.tip-det{color:var(--red);}
+.tip-total{color:var(--muted2);}
+.tip-tnps-cell{text-align:center;}
+.tip-tnps-badge{
+  font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;
+  padding:3px 10px;border-radius:6px;display:inline-block;
+}
+.tip-tnps-badge.g{background:var(--green2);color:var(--green);border:1px solid rgba(0,230,118,.2);}
+.tip-tnps-badge.y{background:var(--yellow2);color:var(--yellow);border:1px solid rgba(255,215,64,.2);}
+.tip-tnps-badge.r{background:var(--red2);color:var(--red);border:1px solid rgba(255,79,109,.2);}
+.tip-tnps-badge.n{color:var(--muted2);}
+
+/* scrollbar */
+.tipif-wrap::-webkit-scrollbar{width:5px;height:5px;}
+.tipif-wrap::-webkit-scrollbar-track{background:var(--bg2);}
+.tipif-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+.tipif-wrap::-webkit-scrollbar-thumb:hover{background:var(--muted);}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+.login-card{animation:fadeUp .5s ease;}
+.compare-row,.bottom-grid,.tipif-section{animation:fadeUp .4s ease .05s both;}
+
+@media(max-width:680px){
+  .compare-row,.bottom-grid{grid-template-columns:1fr;}
+  #dashScreen{padding:16px 14px 32px;}
+  .tc-num{font-size:40px;}
+  .tipif-controls{flex-direction:column;align-items:flex-start;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-ico">📈</div>
+    <div>
+      <div class="brand-name">MI TNPS</div>
+      <div class="brand-sub">Portal del Asesor</div>
+    </div>
+  </div>
+  <div class="date-tag">🔴 Datos en vivo</div>
+</header>
+
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-avatar">👤</div>
+    <div class="login-title">Consulta tu TNPS</div>
+    <div class="login-sub" id="loginStatus">Conectando a base de datos... ⏳</div>
+    <div class="input-wrap">
+      <span class="input-icon">🆔</span>
+      <input class="user-input" id="userInput" placeholder="Ej: E3054969" maxlength="10" disabled
+        onkeydown="if(event.key==='Enter')buscar()">
+    </div>
+    <button class="btn-ver" id="btnBuscar" onclick="buscar()" disabled>Ver mi TNPS →</button>
+    <div class="error-msg" id="errMsg">❌ Usuario no encontrado. Verifica tu código.</div>
+  </div>
+</div>
+
+<div id="dashScreen">
+  <div class="dash-topbar">
+    <div class="agent-info">
+      <div class="agent-avatar">👤</div>
+      <div>
+        <div class="agent-name" id="dashName">—</div>
+        <div class="agent-meta">Supervisor: <span id="dashSup">—</span> &nbsp;·&nbsp; <span class="agent-id" id="dashId">—</span></div>
+      </div>
+    </div>
+    <button class="btn-salir" onclick="salir()">← Salir</button>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="compare-row">
+    <div class="tnps-card day-card">
+      <div class="tc-label"><span class="tc-ico">☀️</span>TNPS del Día</div>
+      <div class="tc-main">
+        <div class="tc-num" id="tnpsDay" style="--cv:var(--accent)">—</div>
+        <div class="tc-unit">%</div>
+      </div>
+      <div class="tc-pills">
+        <span class="pill p">⭐ <span id="dayP">—</span> prom.</span>
+        <span class="pill pas">→ <span id="dayPas">—</span> pas.</span>
+        <span class="pill d">⚠ <span id="dayD">—</span> det.</span>
+        <span class="pill t">📋 <span id="dayN">—</span> enc.</span>
+        <span class="pill t" style="background:rgba(79,140,255,0.08);color:var(--accent);border:1px solid rgba(79,140,255,0.25)">📞 <span id="dayAtendidas">—</span> atend.</span>
+      </div>
+      <div class="progress-bar">
+        <div class="pb-p" id="pbDayP" style="width:0%"></div>
+        <div class="pb-pas" id="pbDayPas" style="width:0%"></div>
+        <div class="pb-d" id="pbDayD" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="tnps-card mes-card">
+      <div class="tc-label"><span class="tc-ico">📅</span>TNPS Acumulado · Mes</div>
+      <div class="tc-main">
+        <div class="tc-num" id="tnpsMes" style="--cv:var(--green)">—</div>
+        <div class="tc-unit">%</div>
+      </div>
+      <div class="tc-pills">
+        <span class="pill p">⭐ <span id="mesP">—</span> prom.</span>
+        <span class="pill pas">→ <span id="mesPas">—</span> pas.</span>
+        <span class="pill d">⚠ <span id="mesD">—</span> det.</span>
+        <span class="pill t">📋 <span id="mesN">—</span> enc.</span>
+        <span class="pill t" style="background:rgba(0,230,118,0.08);color:var(--green);border:1px solid rgba(0,230,118,0.25)">📞 <span id="mesAtendidas">—</span> atend.</span>
+      </div>
+      <div class="progress-bar">
+        <div class="pb-p" id="pbMesP" style="width:0%"></div>
+        <div class="pb-pas" id="pbMesPas" style="width:0%"></div>
+        <div class="pb-d" id="pbMesD" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trend + Últimas encuestas -->
+  <div class="bottom-grid">
+    <div class="trend-card">
+      <div class="section-title"><span class="st-dot"></span>Evolución TNPS</div>
+      <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+    </div>
+    <div class="surveys-card">
+      <div class="section-title"><span class="st-dot" style="background:var(--yellow)"></span>Últimas encuestas del día</div>
+      <div id="surveysContainer"></div>
+    </div>
+  </div>
+
+  <!-- ── TIPIFICACIÓN ──────────────────────────────────────────────────── -->
+  <div class="tipif-section">
+    <div class="section-title">
+      <span class="st-dot" style="background:var(--yellow)"></span>
+      Motivo de Llamada · Promotores / Neutros / Detractores
+    </div>
+    <div class="tipif-controls">
+      <div class="tipif-tab-group">
+        <button class="tipif-tab active" id="tipifTabDay" onclick="switchTipifTab('day')">Día de Hoy</button>
+        <button class="tipif-tab"        id="tipifTabMes" onclick="switchTipifTab('mes')">Acumulado del Mes</button>
+      </div>
+    </div>
+    <div class="tipif-wrap">
+      <table class="tipif-table">
+        <thead>
+          <tr>
+            <th class="tip-col">Motivo de Llamada (Tipificación)</th>
+            <th class="num-col" style="color:var(--green)">Prom.</th>
+            <th class="num-col" style="color:var(--yellow)">Neut.</th>
+            <th class="num-col" style="color:var(--red)">Det.</th>
+            <th class="num-col">Total</th>
+            <th class="num-col">TNPS</th>
+          </tr>
+        </thead>
+        <tbody id="tipifBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// =========================================================================
+// ⚙️ URLs de Google Sheets (publicadas como CSV)
+// =========================================================================
+const URL_REPORTE_HISTORICO = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRyJPvCQb-sTQHwWa6-ezmyWCHjCr9L5UQBYOKNvzZVnvYSewUOBA_H_Xl5CHMhjgzyPBa6MULPHTNL/pub?output=csv";
+const URL_DISTRIBUCION      = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSOh92jwPKC3py3JeQGzVVRuDxBp_72ndUcbmgNHdzwQ9anNTrc5xF-2G2riC2wXwTSM4dbg0-TYV3m/pub?output=csv";
+
+// =========================================================================
+// Columnas del ReporteHistorico
+// =========================================================================
+const COL_FECHA        = "Fecha";
+const COL_HORA         = "Hora";
+const COL_NOMBRE_OP    = "Nombre Operador";
+const COL_NUM_EMPLEADO = "Número Empleado";
+const COL_TIPIFICACION = "Tipificación";
+const COL_PREGUNTA1    = "Pregunta 1";
+const COL_RESULTADO    = "Resultado de llamada";
+const COL_ULT_SALIR   = "Ultimo en salir";
+
+// Columnas de distribución
+const COL_DIST_ID      = "USUARIO";
+const COL_DIST_NOMBRE  = "NOMBRES Y APELLIDOS";
+const COL_DIST_SUPER   = "SUPERVISOR DE OPERACIONES";
+
+// =========================================================================
+
+let AGENTS = {};
+let currentAgent = null;
+let currentTipifTab = 'day';
+let trendChartInstance = null;
+
+// ── Helpers ──────────────────────────────────────────────────────────────
+
+function parseFechaRow(val) {
+  if (!val) return null;
+  const s = String(val).trim();
+  // YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    const [y, m, d] = s.substring(0,10).split('-').map(Number);
+    return { yymmdd: y*10000 + m*100 + d, yyyymm: y*100 + m };
+  }
+  // DD/MM/YYYY
+  if (s.includes('/')) {
+    const parts = s.split('/');
+    if (parts.length === 3) {
+      const d = parseInt(parts[0],10), m = parseInt(parts[1],10), y = parseInt(parts[2],10);
+      return { yymmdd: y*10000 + m*100 + d, yyyymm: y*100 + m };
+    }
+  }
+  // Excel serial
+  const num = parseFloat(s);
+  if (!isNaN(num)) {
+    const dt = new Date(Math.round((num-25569)*86400000));
+    const y = dt.getUTCFullYear(), mo = dt.getUTCMonth()+1, d = dt.getUTCDate();
+    return { yymmdd: y*10000 + mo*100 + d, yyyymm: y*100 + mo };
+  }
+  return null;
+}
+
+function yyyymmddToShortDate(ymd) {
+  const d = ymd % 100;
+  const m = Math.floor((ymd % 10000) / 100);
+  return `${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}`;
+}
+
+function clasificarNPS(score) {
+  if (score >= 9) return 'Promotor';
+  if (score >= 7) return 'Pasivo';
+  return 'Detractor';
+}
+
+function calcTNPS(prom, det, total) {
+  if (total === 0) return null;
+  return ((prom - det) / total) * 100;
+}
+
+function tnpsColor(v) {
+  if (v === null || v === undefined || isNaN(v)) return 'var(--muted2)';
+  if (v >= 70) return 'var(--green)';
+  if (v >= 40) return 'var(--accent)';
+  return 'var(--red)';
+}
+
+function fetchCSV(url) {
+  return new Promise((resolve, reject) => {
+    Papa.parse(url, {
+      download: true, header: true, skipEmptyLines: true,
+      transformHeader: h => h.trim(),
+      complete: r => resolve(r.data),
+      error: err => reject(err)
+    });
+  });
+}
+
+// ── Inicialización ────────────────────────────────────────────────────────
+
+async function inicializarDatos() {
+  try {
+    const [reporte, distribucion] = await Promise.all([
+      fetchCSV(URL_REPORTE_HISTORICO),
+      fetchCSV(URL_DISTRIBUCION)
+    ]);
+
+    // 1. Construir directorio de asesores desde tele_distri
+    distribucion.forEach(row => {
+      const codigo = row[COL_DIST_ID]?.trim().toUpperCase();
+      if (!codigo) return;
+      AGENTS[codigo] = {
+        usuario:    codigo,
+        nombre:     row[COL_DIST_NOMBRE]?.trim() || '—',
+        supervisor: row[COL_DIST_SUPER]?.trim()  || 'Sin asignar',
+        dia: { prom:0, pas:0, det:0, total:0, tnps:null, atendidas:0 },
+        mes: { prom:0, pas:0, det:0, total:0, tnps:null, atendidas:0 },
+        tipifDia: {},   // motivo → {prom, pas, det, total}
+        tipifMes: {},
+        last5: [],      // últimas encuestas del día para mostrar
+        dailyMetrics: {},
+        trend: []
+      };
+    });
+
+    // 2. Detectar fecha más reciente
+    let maxFechaInt = 0;
+    reporte.forEach(row => {
+      const p = parseFechaRow(row[COL_FECHA]);
+      if (p && p.yymmdd > maxFechaInt) maxFechaInt = p.yymmdd;
+    });
+    const maxFechaYYYYMM = Math.floor(maxFechaInt / 100);
+
+    // Buffer para últimas encuestas (día)
+    const last5Buffer = {}; // codigo → [{score, tipo, hora, tipif}]
+
+    // 3. Procesar ReporteHistorico
+    reporte.forEach(row => {
+      // Identificar asesor por código de empleado, fallback por nombre
+      let codigo = row[COL_NUM_EMPLEADO]?.trim().toUpperCase();
+      let agentObj = codigo ? AGENTS[codigo] : null;
+      if (!agentObj) {
+        const nombreOp = row[COL_NOMBRE_OP]?.trim().toUpperCase();
+        if (nombreOp) {
+          const found = Object.values(AGENTS).find(a => a.nombre.toUpperCase() === nombreOp);
+          if (found) { agentObj = found; codigo = found.usuario; }
+        }
+      }
+      if (!agentObj) return;
+
+      const pDate = parseFechaRow(row[COL_FECHA]);
+      if (!pDate) return;
+      if (pDate.yyyymm !== maxFechaYYYYMM) return;
+
+      const fechaInt = pDate.yymmdd;
+      const esHoy   = fechaInt === maxFechaInt;
+
+      // A. Atendidas
+      const resultado = row[COL_RESULTADO]?.trim() || '';
+      if (resultado === 'Atendido') {
+        agentObj.mes.atendidas++;
+        if (esHoy) agentObj.dia.atendidas++;
+      }
+
+      // B. Solo filas con score NPS válido
+      const scoreRaw = row[COL_PREGUNTA1];
+      if (!scoreRaw || scoreRaw === '---' || scoreRaw === '-') return;
+      const score = parseFloat(scoreRaw);
+      if (isNaN(score) || score < 0 || score > 10) return;
+
+      const tipo   = clasificarNPS(Math.round(score));
+      const tipif  = (row[COL_TIPIFICACION]?.trim() || '').toUpperCase();
+      const motivo = (!tipif || tipif === '---' || tipif === '') ? 'SIN TIPIFICACIÓN' : tipif;
+      const hora   = row[COL_HORA]?.trim() || '—';
+
+      // Métricas mes
+      agentObj.mes.total++;
+      if (tipo==='Promotor')  agentObj.mes.prom++;
+      else if (tipo==='Pasivo') agentObj.mes.pas++;
+      else agentObj.mes.det++;
+
+      // Métricas día
+      if (esHoy) {
+        agentObj.dia.total++;
+        if (tipo==='Promotor')  agentObj.dia.prom++;
+        else if (tipo==='Pasivo') agentObj.dia.pas++;
+        else agentObj.dia.det++;
+
+        // Buffer últimas encuestas
+        if (!last5Buffer[codigo]) last5Buffer[codigo] = [];
+        last5Buffer[codigo].push({ score: Math.round(score), tipo, hora, motivo });
+      }
+
+      // Métricas diarias para trend
+      if (!agentObj.dailyMetrics[fechaInt]) agentObj.dailyMetrics[fechaInt] = {prom:0,pas:0,det:0,total:0};
+      agentObj.dailyMetrics[fechaInt].total++;
+      if (tipo==='Promotor')  agentObj.dailyMetrics[fechaInt].prom++;
+      else if (tipo==='Pasivo') agentObj.dailyMetrics[fechaInt].pas++;
+      else agentObj.dailyMetrics[fechaInt].det++;
+
+      // Tipificación mes
+      if (!agentObj.tipifMes[motivo]) agentObj.tipifMes[motivo] = {prom:0,pas:0,det:0,total:0};
+      agentObj.tipifMes[motivo].total++;
+      if (tipo==='Promotor')  agentObj.tipifMes[motivo].prom++;
+      else if (tipo==='Pasivo') agentObj.tipifMes[motivo].pas++;
+      else agentObj.tipifMes[motivo].det++;
+
+      // Tipificación día
+      if (esHoy) {
+        if (!agentObj.tipifDia[motivo]) agentObj.tipifDia[motivo] = {prom:0,pas:0,det:0,total:0};
+        agentObj.tipifDia[motivo].total++;
+        if (tipo==='Promotor')  agentObj.tipifDia[motivo].prom++;
+        else if (tipo==='Pasivo') agentObj.tipifDia[motivo].pas++;
+        else agentObj.tipifDia[motivo].det++;
+      }
+    });
+
+    // 4. Calcular TNPS finales + trend + últimas encuestas
+    Object.values(AGENTS).forEach(a => {
+      const fechas = Object.keys(a.dailyMetrics).map(Number).sort((x,y)=>x-y);
+      const dailyVals = [];
+      fechas.forEach(f => {
+        const d = a.dailyMetrics[f];
+        const v = calcTNPS(d.prom, d.det, d.total);
+        if (v !== null) {
+          dailyVals.push(v);
+          a.trend.push({ fecha: yyyymmddToShortDate(f), tnps: v });
+        }
+      });
+      a.mes.tnps = dailyVals.length > 0 ? dailyVals.reduce((s,v)=>s+v,0)/dailyVals.length : null;
+      a.dia.tnps = calcTNPS(a.dia.prom, a.dia.det, a.dia.total);
+
+      // Últimas 5 encuestas del día (las más recientes al final del array)
+      if (last5Buffer[a.usuario]) {
+        a.last5 = last5Buffer[a.usuario].slice(-5).reverse();
+      }
+    });
+
+    document.getElementById('loginStatus').innerHTML = '✅ Base de datos actualizada en tiempo real.';
+    document.getElementById('loginStatus').style.color = 'var(--green)';
+    document.getElementById('userInput').disabled = false;
+    document.getElementById('btnBuscar').disabled = false;
+    document.getElementById('userInput').focus();
+
+  } catch (err) {
+    console.error('Error:', err);
+    document.getElementById('loginStatus').innerHTML = '❌ Error al conectar con Google Sheets.';
+    document.getElementById('loginStatus').style.color = 'var(--red)';
+  }
+}
+
+inicializarDatos();
+
+// ── Buscar / Render ───────────────────────────────────────────────────────
+
+function buscar() {
+  const raw = document.getElementById('userInput').value.trim().toUpperCase();
+  const errEl = document.getElementById('errMsg');
+  errEl.style.display = 'none';
+  if (!raw) return;
+  const agent = AGENTS[raw];
+  if (!agent) { errEl.style.display = 'block'; return; }
+  currentAgent = agent;
+  renderDash(agent);
+}
+
+function renderDash(a) {
+  document.getElementById('dashName').textContent = a.nombre;
+  document.getElementById('dashSup').textContent  = a.supervisor;
+  document.getElementById('dashId').textContent   = a.usuario;
+
+  // Día
+  const dia = a.dia;
+  document.getElementById('tnpsDay').textContent = dia.tnps !== null ? dia.tnps.toFixed(2) : '—';
+  document.getElementById('tnpsDay').style.setProperty('--cv', tnpsColor(dia.tnps));
+  document.getElementById('dayP').textContent   = dia.prom;
+  document.getElementById('dayPas').textContent = dia.pas;
+  document.getElementById('dayD').textContent   = dia.det;
+  document.getElementById('dayN').textContent   = dia.total;
+  document.getElementById('dayAtendidas').textContent = dia.atendidas;
+  if (dia.total > 0) {
+    document.getElementById('pbDayP').style.width   = (dia.prom/dia.total*100)+'%';
+    document.getElementById('pbDayPas').style.width = (dia.pas/dia.total*100)+'%';
+    document.getElementById('pbDayD').style.width   = (dia.det/dia.total*100)+'%';
+  } else {
+    ['pbDayP','pbDayPas','pbDayD'].forEach(id=>document.getElementById(id).style.width='0%');
+  }
+
+  // Mes
+  const mes = a.mes;
+  document.getElementById('tnpsMes').textContent = mes.tnps !== null ? mes.tnps.toFixed(2) : '—';
+  document.getElementById('tnpsMes').style.setProperty('--cv', tnpsColor(mes.tnps));
+  document.getElementById('mesP').textContent   = mes.prom;
+  document.getElementById('mesPas').textContent = mes.pas;
+  document.getElementById('mesD').textContent   = mes.det;
+  document.getElementById('mesN').textContent   = mes.total;
+  document.getElementById('mesAtendidas').textContent = mes.atendidas;
+  if (mes.total > 0) {
+    document.getElementById('pbMesP').style.width   = (mes.prom/mes.total*100)+'%';
+    document.getElementById('pbMesPas').style.width = (mes.pas/mes.total*100)+'%';
+    document.getElementById('pbMesD').style.width   = (mes.det/mes.total*100)+'%';
+  } else {
+    ['pbMesP','pbMesPas','pbMesD'].forEach(id=>document.getElementById(id).style.width='0%');
+  }
+
+  // Trend chart
+  if (trendChartInstance) { trendChartInstance.destroy(); trendChartInstance = null; }
+  if (a.trend && a.trend.length > 0) {
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    trendChartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: a.trend.map(t => t.fecha),
+        datasets: [{
+          data: a.trend.map(t => t.tnps),
+          borderColor: '#4f8cff',
+          backgroundColor: 'rgba(79,140,255,0.08)',
+          borderWidth: 2.5, pointRadius: 5, tension: 0.4, fill: true
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid:{ color:'rgba(255,255,255,0.04)' }, ticks:{ color:'#4e5d78' } },
+          y: { min:-100, max:100, grid:{ color:'rgba(255,255,255,0.04)' }, ticks:{ color:'#4e5d78' } }
+        }
+      }
+    });
+  }
+
+  // Últimas encuestas
+  const cont = document.getElementById('surveysContainer');
+  if (!a.last5 || a.last5.length === 0) {
+    cont.innerHTML = '<div class="no-survey">Sin encuestas registradas en la fecha más reciente.</div>';
+  } else {
+    cont.innerHTML = a.last5.map((s, i) => {
+      const badgeClass = s.tipo === 'Promotor' ? 'badge-promotor'
+                       : s.tipo === 'Pasivo'   ? 'badge-pasivo'
+                       : 'badge-detractor';
+      return `
+        <div class="survey-item" style="animation:fadeUp .3s ease ${i*0.07}s both;">
+          <div class="survey-score-badge ${badgeClass}">${s.score}</div>
+          <div class="survey-info">
+            <div class="survey-tipo ${s.tipo.toLowerCase()}">${s.tipo}</div>
+            <div class="survey-meta">
+              <span class="survey-detail">🕐 ${s.hora}</span>
+            </div>
+            <span class="survey-tipif">📋 ${s.motivo}</span>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // Tipificación
+  renderTipifTable();
+
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('dashScreen').style.display  = 'block';
+}
+
+// ── Tipificación ──────────────────────────────────────────────────────────
+
+function switchTipifTab(tab) {
+  document.getElementById('tipifTabDay').classList.toggle('active', tab === 'day');
+  document.getElementById('tipifTabMes').classList.toggle('active', tab === 'mes');
+  currentTipifTab = tab;
+  renderTipifTable();
+}
+
+function renderTipifTable() {
+  if (!currentAgent) return;
+  const a = currentAgent;
+  const body = document.getElementById('tipifBody');
+  body.innerHTML = '';
+
+  const tipMap = currentTipifTab === 'day' ? a.tipifDia : a.tipifMes;
+  const keys = Object.keys(tipMap).sort();
+
+  if (keys.length === 0) {
+    body.innerHTML = `<tr><td colspan="6" style="padding:28px;text-align:center;color:var(--muted);font-size:13px;">
+      Sin datos de tipificación para este período.</td></tr>`;
+    return;
+  }
+
+  // Ordenar por total desc
+  const sorted = keys.slice().sort((a, b) => tipMap[b].total - tipMap[a].total);
+
+  sorted.forEach(motivo => {
+    const t = tipMap[motivo];
+    const tnpsTip = calcTNPS(t.prom, t.det, t.total);
+    const tnpsStr = tnpsTip !== null ? tnpsTip.toFixed(1)+'%' : '—';
+    const cls = tnpsTip === null ? 'n' : tnpsTip >= 70 ? 'g' : tnpsTip >= 40 ? 'y' : 'r';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span class="motivo-label">📋 ${motivo}</span></td>
+      <td class="tip-num tip-prom">${t.prom}</td>
+      <td class="tip-num tip-neut">${t.pas}</td>
+      <td class="tip-num tip-det">${t.det}</td>
+      <td class="tip-num tip-total">${t.total}</td>
+      <td class="tip-tnps-cell"><span class="tip-tnps-badge ${cls}">${tnpsStr}</span></td>
+    `;
+    body.appendChild(tr);
+  });
+
+  // Fila de totales
+  const totP = sorted.reduce((s,k)=>s+tipMap[k].prom,0);
+  const totN = sorted.reduce((s,k)=>s+tipMap[k].pas,0);
+  const totD = sorted.reduce((s,k)=>s+tipMap[k].det,0);
+  const totT = sorted.reduce((s,k)=>s+tipMap[k].total,0);
+  const totTNPS = calcTNPS(totP, totD, totT);
+  const totStr  = totTNPS !== null ? totTNPS.toFixed(1)+'%' : '—';
+  const totCls  = totTNPS === null ? 'n' : totTNPS >= 70 ? 'g' : totTNPS >= 40 ? 'y' : 'r';
+
+  const trTot = document.createElement('tr');
+  trTot.style.cssText = 'border-top:2px solid var(--border2);font-weight:700;';
+  trTot.innerHTML = `
+    <td style="color:var(--muted2);font-size:11px;text-transform:uppercase;letter-spacing:1px;padding-left:14px;">
+      Total
+    </td>
+    <td class="tip-num tip-prom">${totP}</td>
+    <td class="tip-num tip-neut">${totN}</td>
+    <td class="tip-num tip-det">${totD}</td>
+    <td class="tip-num tip-total">${totT}</td>
+    <td class="tip-tnps-cell"><span class="tip-tnps-badge ${totCls}">${totStr}</span></td>
+  `;
+  body.appendChild(trTot);
+}
+
+// ── Salir ─────────────────────────────────────────────────────────────────
+
+function salir() {
+  document.getElementById('dashScreen').style.display  = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('userInput').value = '';
+  currentAgent = null;
+}
+
+// Bloquear DevTools
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+  if (e.key==='F12'||e.keyCode===123) e.preventDefault();
+  if ((e.ctrlKey&&e.shiftKey&&e.key==='I')||(e.metaKey&&e.altKey&&e.key==='i')) e.preventDefault();
+  if ((e.ctrlKey&&e.shiftKey&&e.key==='J')||(e.metaKey&&e.altKey&&e.key==='j')) e.preventDefault();
+  if ((e.ctrlKey&&e.key==='U')||(e.metaKey&&e.key==='u')) e.preventDefault();
+});
+</script>
+</body>
+</html>

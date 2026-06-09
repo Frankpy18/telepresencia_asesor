@@ -821,7 +821,7 @@ function renderTipifTable() {
   sorted.forEach(motivo => {
     const t = tipMap[motivo];
     const tnpsTip = calcTNPS(t.prom, t.det, t.total);
-    const tnpsStr = tnpsTip !== null ? tnpsTip.toFixed(1)+'%' : '—';
+    const tnpsStr = tnpsTip !== null ? tnpsTip.toFixed(2)+'%' : '—';
     const cls = tnpsTip === null ? 'n' : tnpsTip >= 70 ? 'g' : tnpsTip >= 40 ? 'y' : 'r';
 
     const tr = document.createElement('tr');
@@ -842,7 +842,7 @@ function renderTipifTable() {
   const totD = sorted.reduce((s,k)=>s+tipMap[k].det,0);
   const totT = sorted.reduce((s,k)=>s+tipMap[k].total,0);
   const totTNPS = calcTNPS(totP, totD, totT);
-  const totStr  = totTNPS !== null ? totTNPS.toFixed(1)+'%' : '—';
+  const totStr  = totTNPS !== null ? totTNPS.toFixed(2)+'%' : '—';
   const totCls  = totTNPS === null ? 'n' : totTNPS >= 70 ? 'g' : totTNPS >= 40 ? 'y' : 'r';
 
   const trTot = document.createElement('tr');
